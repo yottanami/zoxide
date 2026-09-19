@@ -37,6 +37,7 @@ function __zoxide_cd() {
 {%- if hook == InitHook::Prompt %}
 function __zoxide_hook() {
     \builtin local -r retval="$?"
+    __zoxide_hook_ran=1
     if [[ -o history ]]; then
         # shellcheck disable=SC2312
         \command zoxide add -- "$(__zoxide_pwd)"
@@ -49,6 +50,7 @@ __zoxide_oldpwd="$(__zoxide_pwd)"
 
 function __zoxide_hook() {
     \builtin local -r retval="$?"
+    __zoxide_hook_ran=1
     \builtin local pwd_tmp
     pwd_tmp="$(__zoxide_pwd)"
     if [[ ${__zoxide_oldpwd} != "${pwd_tmp}" ]]; then
@@ -86,6 +88,11 @@ function __zoxide_doctor() {
     [[ ${PROMPT_COMMAND[@]:-} == *'__zoxide_hook'* ]] && return 0
     # shellcheck disable=SC2199
     [[ ${__vsc_original_prompt_command[@]:-} == *'__zoxide_hook'* ]] && return 0
+    # Terminals that wrap PROMPT_COMMAND keep the hook somewhere this function
+    # cannot see: inside a function they call (Warp), or in a saved copy of the
+    # original PROMPT_COMMAND (inshellisense, Termius). If the hook has run, it
+    # is installed, wherever it ended up.
+    [[ -n ${__zoxide_hook_ran:-} ]] && return 0
 
     _ZO_DOCTOR=0
     \builtin printf '%s\n' \
